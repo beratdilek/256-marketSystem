@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400" viewBox="0 0 600 400">
+  <rect width="600" height="400" fill="#e9f7ef"/>
+  <rect x="170" y="90" width="260" height="210" rx="22" fill="#198754" opacity="0.18"/>
+  <path d="M300 115c72 46 101 102 84 151-16 46-67 65-120 41-54-24-73-77-47-124 14-25 43-49 83-68z" fill="#198754" opacity="0.55"/>
+  <text x="300" y="345" text-anchor="middle" font-family="Arial" font-size="28" fill="#198754">Urun Resmi</text>
+</svg>

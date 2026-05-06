@@ -1,0 +1,15 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: sustainable_market_mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: sustainable_market
+    ports:
+      - "3307:3306"
+    volumes:
+      - sustainable_market_mysql_data:/var/lib/mysql
+
+volumes:
+  sustainable_market_mysql_data:
