@@ -12,9 +12,9 @@
   <div class="container">
     <a class="navbar-brand fw-bold" href="/">Discount Market</a>
     <div class="navbar-nav ms-auto">
-      <a class="nav-link" href="/giris">Giris</a>
-      <a class="nav-link active" href="/market-kayit">Market Kayit</a>
-      <a class="nav-link" href="/musteri-kayit">Musteri Kayit</a>
+      <a class="nav-link" href="/giris">Giriş</a>
+      <a class="nav-link active" href="/market-kayit">Market Kayıt</a>
+      <a class="nav-link" href="/musteri-kayit">Müşteri Kayıt</a>
     </div>
   </div>
 </nav>
@@ -25,27 +25,27 @@
   <% } %>
   <div class="card shadow-sm border-0">
     <div class="card-body p-4">
-      <h3 class="fw-bold mb-3">Market Kaydi</h3>
+      <h3 class="fw-bold mb-3">Market Kaydı</h3>
       <form method="post" action="/market-kayit">
         <div class="mb-3">
           <label class="form-label">Email</label>
           <input type="email" name="email" class="form-control" value="<%= eskiBilgi.email || '' %>" required>
         </div>
         <div class="mb-3">
-          <label class="form-label">Market Adi</label>
+          <label class="form-label">Market Adı</label>
           <input type="text" name="ad" class="form-control" value="<%= eskiBilgi.ad || '' %>" required>
         </div>
         <div class="mb-3">
-          <label class="form-label">Sifre</label>
+          <label class="form-label">Şifre</label>
           <input type="password" name="sifre" class="form-control" required>
         </div>
         <div class="row">
           <div class="col-md-6 mb-3">
-            <label class="form-label">Sehir</label>
+            <label class="form-label">Şehir</label>
             <input type="text" name="sehir" class="form-control" value="<%= eskiBilgi.sehir || '' %>" required>
           </div>
           <div class="col-md-6 mb-3">
-            <label class="form-label">Ilce</label>
+            <label class="form-label">İlçe</label>
             <input type="text" name="ilce" class="form-control" value="<%= eskiBilgi.ilce || '' %>" required>
           </div>
         </div>
