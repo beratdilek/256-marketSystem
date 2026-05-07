@@ -54,8 +54,24 @@ function dogrulamaKoduOlustur() {
   return String(Math.floor(100000 + Math.random() * 900000)); //RASTGELE DOĞRULAMA KODU OLUŞTURMAK İÇİN -> HER ZAMAN 6 HANE
 }
 
-async function mailKoduGonder(email, kod) { //EMAIL'E KOD GÖNDERMEK İÇİN HAZIR FONKSİYON
-  const transporter = nodemailer.createTransport({
+function girisGerekli(req, res, next) {
+  if (!req.session.kullanici) {
+    req.session.mesajHata = 'Bu sayfaya girmek için önce giriş yapmalısınız.';
+    return res.redirect('/giris');
+  }
+  next();
+}
+
+async function mailKoduGonder(email, kod) {
+  if (process.env.EMAIL_DEV_MODE === 'true') {
+    console.log('----------------------------------------');
+    console.log('Email dev mode aktif. Gercek email gonderilmedi.');
+    console.log(`Dogrulama kodu (${email}): ${kod}`);
+    console.log('----------------------------------------');
+    return;
+  }
+
+  const transporter = nodemailer.createTransport({ //EMAIL'E KOD GÖNDERMEK İÇİN HAZIR FONKSİYON
     host: process.env.EMAIL_HOST,
     port: Number(process.env.EMAIL_PORT || 587),
     secure: Number(process.env.EMAIL_PORT) === 465,
@@ -68,8 +84,8 @@ async function mailKoduGonder(email, kod) { //EMAIL'E KOD GÖNDERMEK İÇİN HAZ
   await transporter.sendMail({
     from: process.env.EMAIL_FROM,
     to: email,
-    subject: 'Sustainable Discount Marketplace Doğrulama Kodu',
-    text: `Doğrulama kodunuz: ${kod}. Bu kod 10 dakika geçerlidir.`
+    subject: 'Sustainable Discount Marketplace Dogrulama Kodu',
+    text: `Dogrulama kodunuz: ${kod}. Bu kod 10 dakika icinde gecerlidir.`
   });
 }
 
@@ -177,8 +193,144 @@ app.post('/musteri-kayit', async (req, res, next) => { //SUBMIT EDİLİNCE
   }
 });
 
+app.get('/email-dogrula', (req, res) => {
+  res.render('email-dogrula', { hatalar: [], eskiBilgi: { email: req.query.email || '' } }); //BOS BILGI
+});
+
+app.post('/email-dogrula', async (req, res, next) => { //BURADA KOD CHECK 
+  try {
+    const email = (req.body.email || '').trim();
+    const kod = (req.body.kod || '').trim();
+    const eskiBilgi = { email };
+    const hatalar = [];
+
+    if (!emailDogruMu(email)) hatalar.push('Gecerli email yazmalisiniz.');
+    if (!/^\d{6}$/.test(kod)) hatalar.push('Kod 6 haneli sayi olmalidir.'); //KOD KONTROL
+    if (hatalar.length > 0) {
+      return res.render('email-dogrula', { hatalar, eskiBilgi }); //HATA VARSA EN BAŞA DÖNME GİBİ
+    }
+
+    const [kullanicilar] = await db.query('SELECT * FROM kullanicilar WHERE email = ?', [email]); //KULLANICIYI BULDUK.
+
+    const kullanici = kullanicilar[0];
+
+    const [kodlar] = await db.query(
+      `SELECT * FROM email_dogrulamalari
+       WHERE kullanici_id = ? AND kod = ? AND kullanildi_mi = 0 AND son_tarih > NOW()
+       ORDER BY id DESC LIMIT 1`,
+      [kullanici.id, kod]
+    );
+
+    if (kodlar.length === 0) { //O MAILE AIT KOD GÖZÜKMÜYORSA
+      return res.render('email-dogrula', { hatalar: ['Kod hatalı, kullanılmış veya süresi geçmiş olabilir.'], eskiBilgi });
+    }
+
+    await db.query('UPDATE kullanicilar SET dogrulandi_mi = 1 WHERE id = ?', [kullanici.id]);
+    await db.query('UPDATE email_dogrulamalari SET kullanildi_mi = 1 WHERE id = ?', [kodlar[0].id]);
+
+    req.session.mesajBasari = 'Email doğrulandı.';
+    res.redirect('/giris');
+  } catch (hata) {
+    next(hata);
+  }
+});
+
+app.get('/giris', (req, res) => {
+  res.render('giris', { hatalar: [], eskiBilgi: {} }); //ÖNCE BOŞ
+});
+
+app.post('/giris', async (req, res, next) => {
+  try {
+    const email = (req.body.email || '').trim();
+    const sifre = req.body.sifre || '';
+    const eskiBilgi = { email };
+
+    if (!emailDogruMu(email) || bosMu(sifre)) {
+      return res.render('giris', { hatalar: ['Email formatı yanlış veya şifre alanı boş.'], eskiBilgi });
+    }
+
+    const [kullanicilar] = await db.query('SELECT * FROM kullanicilar WHERE email = ?', [email]);
+    if (kullanicilar.length === 0) {
+      return res.render('giris', { hatalar: ['Email veya şifre hatalı.'], eskiBilgi });
+    }
+
+    const kullanici = kullanicilar[0];
+    if (!kullanici.dogrulandi_mi) {
+      return res.render('giris', { hatalar: ['Önce doğrulama yapmalısınız.'], eskiBilgi });
+    }
+
+    const sifreDogruMu = await bcrypt.compare(sifre, kullanici.sifre_hash); //BURASI HAZIR GELİYOR.
+
+    if (!sifreDogruMu) {
+      return res.render('giris', { hatalar: ['Şifre hatalı.'], eskiBilgi });
+    }
+
+    req.session.kullanici = {
+      id: kullanici.id,
+      email: kullanici.email,
+      rol: kullanici.rol,
+      ad: kullanici.ad,
+      sehir: kullanici.sehir,
+      ilce: kullanici.ilce
+    };
+
+    if (kullanici.rol === 'market') 
+      return res.redirect('/market-panel'); //BIRASI DAHA SONRA YAZCAM
+    res.redirect('/arama'); //BURASI DA DAHA SONRA
+  } catch (hata) {
+    next(hata);
+  }
+});
+
+app.post('/cikis', (req, res) => {
+  req.session.destroy(() => {
+    res.redirect('/');
+  });
+});
+
+app.get('/profil', girisGerekli, (req, res) => { //GİRİS YAPMAMIS BİRİYSE BURASI CALISMAZ
+  res.render('profil', { hatalar: [], eskiBilgi: req.session.kullanici });
+});
+
+app.post('/profil', girisGerekli, async (req, res, next) => {
+  try {
+    const eskiBilgi = {
+      email: req.session.kullanici.email,
+      ad: req.body.ad,
+      sehir: req.body.sehir,
+      ilce: req.body.ilce
+    };
+    const hatalar = [];
+    if (bosMu(req.body.ad)) hatalar.push('Ad boş olamaz.');
+    if (bosMu(req.body.sehir)) hatalar.push('Şehir boş olamaz.');
+    if (bosMu(req.body.ilce)) hatalar.push('İlçe boş olamaz.'); //SIRASIYA BOŞ ALAN KONTROLÜ YAPTIK
+
+    if (hatalar.length > 0) 
+      return res.render('profil', { hatalar, eskiBilgi }); //HATA VARSA BURASI
+
+    await db.query(
+      'UPDATE kullanicilar SET ad = ?, sehir = ?, ilce = ? WHERE id = ?',
+      [req.body.ad.trim(), req.body.sehir.trim(), req.body.ilce.trim(), req.session.kullanici.id]
+    );
+
+    req.session.kullanici.ad = req.body.ad.trim();
+    req.session.kullanici.sehir = req.body.sehir.trim();
+    req.session.kullanici.ilce = req.body.ilce.trim();
+    req.session.mesajBasari = 'Profil bilgileri güncellendi.';
+    res.redirect('/profil');
+  } catch (hata) {
+    next(hata);
+  }
+});
+
 app.use((req, res) => {
   res.status(404).render('hata', { mesaj: 'Sayfa bulunamadi.' });
+});
+
+app.use((hata, req, res, next) => {
+  console.error(hata);
+  const mesaj = hata.message || 'Beklenmeyen bir hata olustu.';
+  res.status(500).render('hata', { mesaj });
 });
 
 app.listen(PORT, () => {
