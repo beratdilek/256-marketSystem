@@ -126,6 +126,24 @@ function kayitHatalariGetir(bilgi, kayitTipi) { //GENEL HATA İÇİN HEM MARKET 
   return hatalar; //BURADAN LENGTH ALACAGIZ.
 }
 
+function urunHatalariGetir(bilgi) { //BURADAN LENGTH ALACAGIZ.
+  const hatalar = [];
+  const stok = Number(bilgi.stok);
+  const normalFiyat = Number(bilgi.normalFiyat);
+  const indirimliFiyat = Number(bilgi.indirimliFiyat);
+
+  if (bosMu(bilgi.baslik)) hatalar.push('Ürün başlığı boş olamaz.');
+  if (!Number.isInteger(stok) || stok < 1) hatalar.push('Stok pozitif bir tam sayı olmalıdır.');
+  if (isNaN(normalFiyat) || normalFiyat <= 0) hatalar.push('Fiyat pozitif olmalidir.');
+  if (isNaN(indirimliFiyat) || indirimliFiyat <= 0) hatalar.push('Fiyat pozitif olmalıdır.');
+  if (!isNaN(normalFiyat) && !isNaN(indirimliFiyat) && indirimliFiyat >= normalFiyat) {
+    hatalar.push('İndirimli fiyat normal fiyattan düşük olmalıdır.');
+  }
+  if (bosMu(bilgi.sonKullanmaTarihi)) hatalar.push('Son kullanma tarihi seçilmelidir.');
+  return hatalar;
+}
+
+
 app.get('/', (req, res) => { //ANA SAYFAMIZ
   res.render('index');
 });
