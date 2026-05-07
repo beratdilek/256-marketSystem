@@ -435,7 +435,7 @@ const resimYukle = multer({
 
 app.get('/urun-ekle', marketGerekli, (req, res) => {
   res.render('urun-form', {
-    formBaslik: 'Yeni Urun Ekle',
+    formBaslik: 'Yeni Ürün Ekle',
     formAction: '/urun-ekle',
     hatalar: [],
     eskiBilgi: {},
@@ -450,7 +450,7 @@ app.post('/urun-ekle', marketGerekli, resimYukle.single('resim'), async (req, re
 
     if (hatalar.length > 0) {
       return res.render('urun-form', {
-        formBaslik: 'Yeni Urun Ekle',
+        formBaslik: 'Yeni Ürün Ekle',
         formAction: '/urun-ekle',
         hatalar,
         eskiBilgi,
@@ -474,7 +474,7 @@ app.post('/urun-ekle', marketGerekli, resimYukle.single('resim'), async (req, re
       ]
     );
 
-    req.session.mesajBasari = 'Urun eklendi.';
+    req.session.mesajBasari = 'Ürün eklendi.';
     res.redirect('/market-panel');
   } catch (hata) {
     next(hata);
@@ -490,12 +490,12 @@ app.get('/urun-duzenle/:id', marketGerekli, async (req, res, next) => {
     );
 
     if (urunler.length === 0) {
-      req.session.mesajHata = 'Urun bulunamadi veya size ait degil.';
+      req.session.mesajHata = 'Ürün bulunamadı.';
       return res.redirect('/market-panel');
     }
 
     res.render('urun-form', {
-      formBaslik: 'Urun Duzenle',
+      formBaslik: 'Ürün Düzenle',
       formAction: '/urun-duzenle/' + urunId,
       hatalar: [],
       eskiBilgi: {},
@@ -515,7 +515,7 @@ app.post('/urun-duzenle/:id', marketGerekli, resimYukle.single('resim'), async (
     );
 
     if (urunler.length === 0) {
-      req.session.mesajHata = 'Urun bulunamadi veya size ait degil.';
+      req.session.mesajHata = 'Ürün bulunamadı.';
       return res.redirect('/market-panel');
     }
 
@@ -524,7 +524,7 @@ app.post('/urun-duzenle/:id', marketGerekli, resimYukle.single('resim'), async (
 
     if (hatalar.length > 0) {
       return res.render('urun-form', {
-        formBaslik: 'Urun Duzenle',
+        formBaslik: 'Ürün Düzenle',
         formAction: '/urun-duzenle/' + urunId,
         hatalar,
         eskiBilgi,
@@ -550,7 +550,7 @@ app.post('/urun-duzenle/:id', marketGerekli, resimYukle.single('resim'), async (
       ]
     );
 
-    req.session.mesajBasari = 'Urun guncellendi.';
+    req.session.mesajBasari = 'Ürün guncellendi.';
     res.redirect('/market-panel');
   } catch (hata) {
     next(hata);
@@ -566,9 +566,9 @@ app.post('/urun-sil/:id', marketGerekli, async (req, res, next) => {
     );
 
     if (sonuc.affectedRows === 0) {
-      req.session.mesajHata = 'Urun silinemedi.';
+      req.session.mesajHata = 'Ürün silinemedi.';
     } else {
-      req.session.mesajBasari = 'Urun silindi.';
+      req.session.mesajBasari = 'Ürün silindi.';
     }
 
     res.redirect('/market-panel');
@@ -644,7 +644,7 @@ app.post('/sepete-ekle', musteriGerekli, async (req, res, next) => {
     );
 
     if (urunler.length === 0) {
-      req.session.mesajHata = 'Bu urun sepete eklenemez.';
+      req.session.mesajHata = 'Bu ürün sepete eklenemez.';
       return res.redirect('/arama');
     }
 
@@ -657,7 +657,7 @@ app.post('/sepete-ekle', musteriGerekli, async (req, res, next) => {
 
     if (sepetSatirlari.length > 0) {
       if (sepetSatirlari[0].adet >= urun.stok) {
-        req.session.mesajHata = 'Sepetteki adet stok miktarini gecemez.';
+        req.session.mesajHata = 'Sepetteki adet stok miktarını geçemez.';
         return res.redirect('/arama?q=' + encodeURIComponent(req.body.q || ''));
       }
 
@@ -672,7 +672,7 @@ app.post('/sepete-ekle', musteriGerekli, async (req, res, next) => {
       );
     }
 
-    req.session.mesajBasari = 'Urun sepete eklendi.';
+    req.session.mesajBasari = 'Ürün sepete eklendi.';
     res.redirect('/arama?q=' + encodeURIComponent(req.body.q || ''));
   } catch (hata) {
     next(hata);
@@ -709,7 +709,7 @@ app.post('/sepet-guncelle', musteriGerekli, async (req, res, next) => {
     const yeniAdet = Number(req.body.yeniAdet);
 
     if (!Number.isInteger(sepetId) || !Number.isInteger(yeniAdet)) {
-      return res.json({ basarili: false, mesaj: 'Gecersiz istek.' });
+      return res.json({ basarili: false, mesaj: 'Geçersiz istek.' });
     }
 
     const [satirlar] = await db.query(
@@ -721,7 +721,7 @@ app.post('/sepet-guncelle', musteriGerekli, async (req, res, next) => {
     );
 
     if (satirlar.length === 0) {
-      return res.json({ basarili: false, mesaj: 'Sepet urunu bulunamadi.' });
+      return res.json({ basarili: false, mesaj: 'Sepet ürünü bulunamadı.' });
     }
 
     if (yeniAdet < 1) {
@@ -736,12 +736,12 @@ app.post('/sepet-guncelle', musteriGerekli, async (req, res, next) => {
         basarili: true,
         silindi: true,
         genelToplam: genelToplam.toFixed(2),
-        mesaj: 'Urun sepetten silindi.'
+        mesaj: 'Ürün sepetten silindi.'
       });
     }
 
     if (yeniAdet > satirlar[0].stok) {
-      return res.json({ basarili: false, mesaj: 'Stok miktarindan fazla urun secilemez.' });
+      return res.json({ basarili: false, mesaj: 'Stok miktarindan fazla ürün seçilemez.' });
     }
 
     await db.query(
@@ -756,7 +756,7 @@ app.post('/sepet-guncelle', musteriGerekli, async (req, res, next) => {
       basarili: true,
       urunToplam: urunToplam.toFixed(2),
       genelToplam: genelToplam.toFixed(2),
-      mesaj: 'Sepet guncellendi.'
+      mesaj: 'Sepet güncellendi.'
     });
   } catch (hata) {
     next(hata);
@@ -777,7 +777,7 @@ app.post('/sepet-sil', musteriGerekli, async (req, res, next) => {
     res.json({
       basarili: true,
       genelToplam: genelToplam.toFixed(2),
-      mesaj: 'Urun sepetten silindi.'
+      mesaj: 'Ürün sepetten silindi.'
     });
   } catch (hata) {
     next(hata);
