@@ -46,6 +46,21 @@ function bosMu(deger) {
   return !deger || String(deger).trim() === ''; //GENEL KULLANMAK İÇİN BOŞ MU DEĞİL Mİ?
 }
 
+app.use((req, res, next) => { //GLOBAL MIDDLEWARE
+  res.locals.kullanici = req.session.kullanici || null;
+  res.locals.mesajHata = req.session.mesajHata || null;
+  res.locals.mesajBasari = req.session.mesajBasari || null;
+  res.locals.paraYaz = (deger) => Number(deger || 0).toFixed(2);
+  res.locals.tarihYaz = (tarih) => {
+    if (!tarih) return '';
+    return new Date(tarih).toISOString().slice(0, 10);
+  };
+  delete req.session.mesajHata;
+  delete req.session.mesajBasari;
+  next();
+});
+
+
 function emailDogruMu(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email || '');
 }
@@ -323,13 +338,55 @@ app.post('/profil', girisGerekli, async (req, res, next) => {
   }
 });
 
+
+
+
+
+function marketGerekli(req, res, next) {
+  if (!req.session.kullanici || req.session.kullanici.rol !== 'market') {
+    req.session.mesajHata = 'Bu sayfa sadece market kullanıcıları içindir.';
+    return res.redirect('/giris');
+  }
+  next();
+}
+
+function musteriGerekli(req, res, next) {
+  if (!req.session.kullanici || req.session.kullanici.rol !== 'musteri') {
+    req.session.mesajHata = 'Bu sayfa sadece müşteri kullanıcıları içindir.';
+    return res.redirect('/giris');
+  }
+  next();
+}
+
+
+
+app.get('/market-panel', marketGerekli, async (req, res, next) => { 
+  try {
+    const [urunler] = await db.query(
+      `SELECT *, DATEDIFF(son_kullanma_tarihi, CURDATE()) AS kalan_gun,
+              CASE WHEN son_kullanma_tarihi < CURDATE() THEN 1 ELSE 0 END AS tarihi_gecti_mi
+       FROM urunler
+       WHERE market_id = ?
+       ORDER BY son_kullanma_tarihi ASC`,
+      [req.session.kullanici.id]
+    );
+
+    res.render('market-panel', { urunler });
+  } catch (hata) {
+    next(hata);
+  }
+});
+
+
+
+
 app.use((req, res) => {
-  res.status(404).render('hata', { mesaj: 'Sayfa bulunamadi.' });
+  res.status(404).render('hata', { mesaj: 'Sayfa bulunamadı.' });
 });
 
 app.use((hata, req, res, next) => {
   console.error(hata);
-  const mesaj = hata.message || 'Beklenmeyen bir hata olustu.';
+  const mesaj = hata.message || 'Beklenmeyen bir hata oluştu.';
   res.status(500).render('hata', { mesaj });
 });
 
