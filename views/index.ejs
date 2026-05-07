@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sustainable Discount Marketplace</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark bg-success">
+  <div class="container">
+    <a class="navbar-brand fw-bold" href="/">Discount Market</a>
+    <div class="navbar-nav ms-auto">
+      <% if (!kullanici) { %>
+        <a class="nav-link" href="/giris">Giriş</a>
+        <a class="nav-link" href="/market-kayit">Market Kayıt</a>
+        <a class="nav-link" href="/musteri-kayit">Müşteri Kayıt</a>
+      <% } else if (kullanici.rol === 'market') { %>
+        <a class="nav-link" href="/market-panel">Market Panel</a>
+        <a class="nav-link" href="/profil">Profil</a>
+        <form method="post" action="/cikis"><button class="btn btn-sm btn-light ms-2">Çıkış</button></form>
+      <% } else { %>
+        <a class="nav-link" href="/arama">Ürün Ara</a>
+        <a class="nav-link" href="/sepet">Sepet</a>
+        <a class="nav-link" href="/profil">Profil</a>
+        <form method="post" action="/cikis"><button class="btn btn-sm btn-light ms-2">Çıkış</button></form>
+      <% } %>
+    </div>
+  </div>
+</nav>
+
+<main class="container py-5">
+  <% if (mesajHata) { %><div class="alert alert-danger"><%= mesajHata %></div><% } %>
+  <% if (mesajBasari) { %><div class="alert alert-success"><%= mesajBasari %></div><% } %>
+
+  <div class="row align-items-center g-4">
+    <div class="col-md-7">
+      <h1 class="display-5 fw-bold">Son kullanma tarihi yaklaşan ürünler daha uygun fiyatla satılsın.</h1>
+      <div class="mt-4">
+        <a href="/musteri-kayit" class="btn btn-success btn-lg me-2">Müşteri Kayıt</a>
+        <a href="/market-kayit" class="btn btn-outline-success btn-lg">Market Kayıt</a>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

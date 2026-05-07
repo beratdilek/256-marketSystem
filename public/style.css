@@ -1,0 +1,57 @@
+body {
+  background: #f4f7f4;
+}
+
+.sayfa-dar {
+  max-width: 650px;
+}
+
+.card {
+  border-radius: 14px;
+}
+
+.urun-resmi {
+  height: 180px;
+  object-fit: cover;
+  background: #eef7ee;
+}
+
+.kucuk-resim {
+  width: 120px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+}
+
+.sepet-resmi {
+  width: 64px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+}
+
+.expired-card {
+  border: 2px solid #dc3545;
+  background: #fff6f6;
+}
+
+.toplam-kart {
+  max-width: 380px;
+}
+
+.navbar form {
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  .navbar-nav {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .urun-resmi {
+    height: 220px;
+  }
+}
