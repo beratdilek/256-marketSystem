@@ -6,6 +6,7 @@ const mysql = require('mysql2/promise');
 const bcrypt = require('bcrypt');
 const session = require('express-session');
 const nodemailer = require('nodemailer');
+const multer = require('multer');
 
 const app = express();
 const PORT = 3000;
@@ -377,7 +378,177 @@ app.get('/market-panel', marketGerekli, async (req, res, next) => {
   }
 });
 
+const yuklemeAyarlari = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, path.join(__dirname, 'public', 'uploads'));
+  },
+  filename: (req, file, cb) => {
+    const uzanti = path.extname(file.originalname).toLowerCase();
+    const dosyaAdi = Date.now() + '-' + Math.round(Math.random() * 100000) + uzanti;
+    cb(null, dosyaAdi);
+  }
+});
 
+
+const resimYukle = multer({
+  storage: yuklemeAyarlari,
+  limits: { fileSize: 2 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const izinVerilenTipler = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'];
+    if (izinVerilenTipler.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Sadece resim dosyasi yukleyebilirsiniz.'));
+    }
+  }
+});
+
+
+
+
+app.get('/urun-ekle', marketGerekli, (req, res) => {
+  res.render('urun-form', {
+    formBaslik: 'Yeni Urun Ekle',
+    formAction: '/urun-ekle',
+    hatalar: [],
+    eskiBilgi: {},
+    urun: null
+  });
+});
+
+app.post('/urun-ekle', marketGerekli, resimYukle.single('resim'), async (req, res, next) => {
+  try {
+    const eskiBilgi = req.body;
+    const hatalar = urunHatalariGetir(req.body);
+
+    if (hatalar.length > 0) {
+      return res.render('urun-form', {
+        formBaslik: 'Yeni Urun Ekle',
+        formAction: '/urun-ekle',
+        hatalar,
+        eskiBilgi,
+        urun: null
+      });
+    }
+
+    const resimYolu = req.file ? '/uploads/' + req.file.filename : '/uploads/default-product.svg';
+
+    await db.query(
+      `INSERT INTO urunler (market_id, baslik, stok, normal_fiyat, indirimli_fiyat, son_kullanma_tarihi, resim_yolu)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        req.session.kullanici.id,
+        req.body.baslik.trim(),
+        Number(req.body.stok),
+        Number(req.body.normalFiyat),
+        Number(req.body.indirimliFiyat),
+        req.body.sonKullanmaTarihi,
+        resimYolu
+      ]
+    );
+
+    req.session.mesajBasari = 'Urun eklendi.';
+    res.redirect('/market-panel');
+  } catch (hata) {
+    next(hata);
+  }
+});
+
+app.get('/urun-duzenle/:id', marketGerekli, async (req, res, next) => {
+  try {
+    const urunId = Number(req.params.id);
+    const [urunler] = await db.query(
+      'SELECT * FROM urunler WHERE id = ? AND market_id = ?',
+      [urunId, req.session.kullanici.id]
+    );
+
+    if (urunler.length === 0) {
+      req.session.mesajHata = 'Urun bulunamadi veya size ait degil.';
+      return res.redirect('/market-panel');
+    }
+
+    res.render('urun-form', {
+      formBaslik: 'Urun Duzenle',
+      formAction: '/urun-duzenle/' + urunId,
+      hatalar: [],
+      eskiBilgi: {},
+      urun: urunler[0]
+    });
+  } catch (hata) {
+    next(hata);
+  }
+});
+
+app.post('/urun-duzenle/:id', marketGerekli, resimYukle.single('resim'), async (req, res, next) => {
+  try {
+    const urunId = Number(req.params.id);
+    const [urunler] = await db.query(
+      'SELECT * FROM urunler WHERE id = ? AND market_id = ?',
+      [urunId, req.session.kullanici.id]
+    );
+
+    if (urunler.length === 0) {
+      req.session.mesajHata = 'Urun bulunamadi veya size ait degil.';
+      return res.redirect('/market-panel');
+    }
+
+    const eskiBilgi = req.body;
+    const hatalar = urunHatalariGetir(req.body);
+
+    if (hatalar.length > 0) {
+      return res.render('urun-form', {
+        formBaslik: 'Urun Duzenle',
+        formAction: '/urun-duzenle/' + urunId,
+        hatalar,
+        eskiBilgi,
+        urun: urunler[0]
+      });
+    }
+
+    const resimYolu = req.file ? '/uploads/' + req.file.filename : urunler[0].resim_yolu;
+
+    await db.query(
+      `UPDATE urunler
+       SET baslik = ?, stok = ?, normal_fiyat = ?, indirimli_fiyat = ?, son_kullanma_tarihi = ?, resim_yolu = ?
+       WHERE id = ? AND market_id = ?`,
+      [
+        req.body.baslik.trim(),
+        Number(req.body.stok),
+        Number(req.body.normalFiyat),
+        Number(req.body.indirimliFiyat),
+        req.body.sonKullanmaTarihi,
+        resimYolu,
+        urunId,
+        req.session.kullanici.id
+      ]
+    );
+
+    req.session.mesajBasari = 'Urun guncellendi.';
+    res.redirect('/market-panel');
+  } catch (hata) {
+    next(hata);
+  }
+});
+
+app.post('/urun-sil/:id', marketGerekli, async (req, res, next) => {
+  try {
+    const urunId = Number(req.params.id);
+    const [sonuc] = await db.query(
+      'DELETE FROM urunler WHERE id = ? AND market_id = ?',
+      [urunId, req.session.kullanici.id]
+    );
+
+    if (sonuc.affectedRows === 0) {
+      req.session.mesajHata = 'Urun silinemedi.';
+    } else {
+      req.session.mesajBasari = 'Urun silindi.';
+    }
+
+    res.redirect('/market-panel');
+  } catch (hata) {
+    next(hata);
+  }
+});
 
 
 app.use((req, res) => {
