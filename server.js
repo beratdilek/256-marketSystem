@@ -126,6 +126,36 @@ function kayitHatalariGetir(bilgi, kayitTipi) { //GENEL HATA İÇİN HEM MARKET 
   return hatalar; //BURADAN LENGTH ALACAGIZ.
 }
 
+
+function urunHatalariGetir(bilgi) { //BURADAN LENGTH ALACAGIZ.
+  const hatalar = [];
+  const stok = Number(bilgi.stok);
+  const normalFiyat = Number(bilgi.normalFiyat);
+  const indirimliFiyat = Number(bilgi.indirimliFiyat);
+
+  if (bosMu(bilgi.baslik)) hatalar.push('Ürün başlığı boş olamaz.');
+  if (!Number.isInteger(stok) || stok < 1) hatalar.push('Stok pozitif bir tam sayı olmalıdır.');
+  if (isNaN(normalFiyat) || normalFiyat <= 0) hatalar.push('Fiyat pozitif olmalidir.');
+  if (isNaN(indirimliFiyat) || indirimliFiyat <= 0) hatalar.push('Fiyat pozitif olmalıdır.');
+  if (!isNaN(normalFiyat) && !isNaN(indirimliFiyat) && indirimliFiyat >= normalFiyat) {
+    hatalar.push('İndirimli fiyat normal fiyattan düşük olmalıdır.');
+  }
+  if (bosMu(bilgi.sonKullanmaTarihi)) hatalar.push('Son kullanma tarihi seçilmelidir.');
+  return hatalar;
+}
+
+async function sepetToplamiGetir(musteriId) {
+  const [satirlar] = await db.query(
+    `SELECT COALESCE(SUM(s.adet * u.indirimli_fiyat), 0) AS genel_toplam
+     FROM sepet_urunleri s
+     JOIN urunler u ON u.id = s.urun_id
+     WHERE s.musteri_id = ?`,
+    [musteriId]
+  );
+  return Number(satirlar[0].genel_toplam || 0);
+}
+
+
 app.get('/', (req, res) => { //ANA SAYFAMIZ
   res.render('index');
 });
@@ -545,6 +575,213 @@ app.post('/urun-sil/:id', marketGerekli, async (req, res, next) => {
     }
 
     res.redirect('/market-panel');
+  } catch (hata) {
+    next(hata);
+  }
+});
+
+
+app.get('/arama', musteriGerekli, async (req, res, next) => {
+  try {
+    const aramaKelimesi = (req.query.q || '').trim();
+    const sayfaNo = Math.max(parseInt(req.query.sayfa || '1', 10), 1);
+    const sayfaLimiti = 4;
+    const baslangic = (sayfaNo - 1) * sayfaLimiti;
+    const likeKelime = '%' + aramaKelimesi + '%';
+
+    const [sayacSatirlari] = await db.query(
+      `SELECT COUNT(*) AS toplam
+       FROM urunler u
+       JOIN kullanicilar m ON m.id = u.market_id
+       WHERE m.sehir = ?
+         AND u.baslik LIKE ?
+         AND u.stok > 0
+         AND u.son_kullanma_tarihi >= CURDATE()`,
+      [req.session.kullanici.sehir, likeKelime]
+    );
+
+    const toplamUrun = Number(sayacSatirlari[0].toplam || 0);
+    const toplamSayfa = Math.max(Math.ceil(toplamUrun / sayfaLimiti), 1);
+
+    const [urunler] = await db.query(
+      `SELECT u.*, m.ad AS market_adi, m.sehir, m.ilce,
+              DATEDIFF(u.son_kullanma_tarihi, CURDATE()) AS kalan_gun
+       FROM urunler u
+       JOIN kullanicilar m ON m.id = u.market_id
+       WHERE m.sehir = ?
+         AND u.baslik LIKE ?
+         AND u.stok > 0
+         AND u.son_kullanma_tarihi >= CURDATE()
+       ORDER BY CASE WHEN m.ilce = ? THEN 0 ELSE 1 END,
+                u.son_kullanma_tarihi ASC,
+                u.indirimli_fiyat ASC
+       LIMIT ${sayfaLimiti} OFFSET ${baslangic}`,
+      [req.session.kullanici.sehir, likeKelime, req.session.kullanici.ilce]
+    );
+
+    res.render('musteri-arama', {
+      urunler,
+      aramaKelimesi,
+      sayfaNo,
+      toplamSayfa,
+      toplamUrun
+    });
+  } catch (hata) {
+    next(hata);
+  }
+});
+
+app.post('/sepete-ekle', musteriGerekli, async (req, res, next) => {
+  try {
+    const urunId = Number(req.body.urunId);
+
+    const [urunler] = await db.query(
+      `SELECT u.*
+       FROM urunler u
+       JOIN kullanicilar m ON m.id = u.market_id
+       WHERE u.id = ?
+         AND m.sehir = ?
+         AND u.stok > 0
+         AND u.son_kullanma_tarihi >= CURDATE()`,
+      [urunId, req.session.kullanici.sehir]
+    );
+
+    if (urunler.length === 0) {
+      req.session.mesajHata = 'Bu urun sepete eklenemez.';
+      return res.redirect('/arama');
+    }
+
+    const urun = urunler[0];
+
+    const [sepetSatirlari] = await db.query(
+      'SELECT * FROM sepet_urunleri WHERE musteri_id = ? AND urun_id = ?',
+      [req.session.kullanici.id, urunId]
+    );
+
+    if (sepetSatirlari.length > 0) {
+      if (sepetSatirlari[0].adet >= urun.stok) {
+        req.session.mesajHata = 'Sepetteki adet stok miktarini gecemez.';
+        return res.redirect('/arama?q=' + encodeURIComponent(req.body.q || ''));
+      }
+
+      await db.query(
+        'UPDATE sepet_urunleri SET adet = adet + 1 WHERE id = ?',
+        [sepetSatirlari[0].id]
+      );
+    } else {
+      await db.query(
+        'INSERT INTO sepet_urunleri (musteri_id, urun_id, adet) VALUES (?, ?, 1)',
+        [req.session.kullanici.id, urunId]
+      );
+    }
+
+    req.session.mesajBasari = 'Urun sepete eklendi.';
+    res.redirect('/arama?q=' + encodeURIComponent(req.body.q || ''));
+  } catch (hata) {
+    next(hata);
+  }
+});
+
+app.get('/sepet', musteriGerekli, async (req, res, next) => {
+  try {
+    const [sepetUrunleri] = await db.query(
+      `SELECT s.id AS sepet_id, s.adet, u.id AS urun_id, u.baslik, u.indirimli_fiyat, u.stok,
+              u.resim_yolu, u.son_kullanma_tarihi, m.ad AS market_adi,
+              (s.adet * u.indirimli_fiyat) AS urun_toplam
+       FROM sepet_urunleri s
+       JOIN urunler u ON u.id = s.urun_id
+       JOIN kullanicilar m ON m.id = u.market_id
+       WHERE s.musteri_id = ?
+       ORDER BY s.id DESC`,
+      [req.session.kullanici.id]
+    );
+
+    const genelToplam = sepetUrunleri.reduce((toplam, satir) => {
+      return toplam + Number(satir.urun_toplam);
+    }, 0);
+
+    res.render('sepet', { sepetUrunleri, genelToplam });
+  } catch (hata) {
+    next(hata);
+  }
+});
+
+app.post('/sepet-guncelle', musteriGerekli, async (req, res, next) => {
+  try {
+    const sepetId = Number(req.body.sepetId);
+    const yeniAdet = Number(req.body.yeniAdet);
+
+    if (!Number.isInteger(sepetId) || !Number.isInteger(yeniAdet)) {
+      return res.json({ basarili: false, mesaj: 'Gecersiz istek.' });
+    }
+
+    const [satirlar] = await db.query(
+      `SELECT s.*, u.stok, u.indirimli_fiyat
+       FROM sepet_urunleri s
+       JOIN urunler u ON u.id = s.urun_id
+       WHERE s.id = ? AND s.musteri_id = ?`,
+      [sepetId, req.session.kullanici.id]
+    );
+
+    if (satirlar.length === 0) {
+      return res.json({ basarili: false, mesaj: 'Sepet urunu bulunamadi.' });
+    }
+
+    if (yeniAdet < 1) {
+      await db.query(
+        'DELETE FROM sepet_urunleri WHERE id = ? AND musteri_id = ?',
+        [sepetId, req.session.kullanici.id]
+      );
+
+      const genelToplam = await sepetToplamiGetir(req.session.kullanici.id);
+
+      return res.json({
+        basarili: true,
+        silindi: true,
+        genelToplam: genelToplam.toFixed(2),
+        mesaj: 'Urun sepetten silindi.'
+      });
+    }
+
+    if (yeniAdet > satirlar[0].stok) {
+      return res.json({ basarili: false, mesaj: 'Stok miktarindan fazla urun secilemez.' });
+    }
+
+    await db.query(
+      'UPDATE sepet_urunleri SET adet = ? WHERE id = ? AND musteri_id = ?',
+      [yeniAdet, sepetId, req.session.kullanici.id]
+    );
+
+    const urunToplam = yeniAdet * Number(satirlar[0].indirimli_fiyat);
+    const genelToplam = await sepetToplamiGetir(req.session.kullanici.id);
+
+    res.json({
+      basarili: true,
+      urunToplam: urunToplam.toFixed(2),
+      genelToplam: genelToplam.toFixed(2),
+      mesaj: 'Sepet guncellendi.'
+    });
+  } catch (hata) {
+    next(hata);
+  }
+});
+
+app.post('/sepet-sil', musteriGerekli, async (req, res, next) => {
+  try {
+    const sepetId = Number(req.body.sepetId);
+
+    await db.query(
+      'DELETE FROM sepet_urunleri WHERE id = ? AND musteri_id = ?',
+      [sepetId, req.session.kullanici.id]
+    );
+
+    const genelToplam = await sepetToplamiGetir(req.session.kullanici.id);
+
+    res.json({
+      basarili: true,
+      genelToplam: genelToplam.toFixed(2),
+      mesaj: 'Urun sepetten silindi.'
+    });
   } catch (hata) {
     next(hata);
   }
