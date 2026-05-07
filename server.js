@@ -2,6 +2,7 @@ require('dotenv').config();
 
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
 const mysql = require('mysql2/promise');
 const bcrypt = require('bcrypt');
 const session = require('express-session');
@@ -9,7 +10,7 @@ const nodemailer = require('nodemailer');
 const multer = require('multer');
 
 const app = express();
-const PORT = 3000;
+const PORT = Number(process.env.PORT || 3000);
 
 const db = mysql.createPool({
   host: process.env.DB_HOST || '127.0.0.1',
@@ -33,15 +34,6 @@ app.use(session({
   resave: false,
   saveUninitialized: false
 }));
-
-app.use((req, res, next) => {
-  res.locals.kullanici = req.session.kullanici || null;
-  res.locals.mesajHata = req.session.mesajHata || null;
-  res.locals.mesajBasari = req.session.mesajBasari || null;
-  delete req.session.mesajHata;
-  delete req.session.mesajBasari;
-  next();
-});
 
 function bosMu(deger) {
   return !deger || String(deger).trim() === ''; //GENEL KULLANMAK İÇİN BOŞ MU DEĞİL Mİ?
@@ -125,7 +117,6 @@ function kayitHatalariGetir(bilgi, kayitTipi) { //GENEL HATA İÇİN HEM MARKET 
   if (bosMu(bilgi.ilce)) hatalar.push('İlçe boş olamaz.');
   return hatalar; //BURADAN LENGTH ALACAGIZ.
 }
-
 
 function urunHatalariGetir(bilgi) { //BURADAN LENGTH ALACAGIZ.
   const hatalar = [];
@@ -257,6 +248,9 @@ app.post('/email-dogrula', async (req, res, next) => { //BURADA KOD CHECK
     }
 
     const [kullanicilar] = await db.query('SELECT * FROM kullanicilar WHERE email = ?', [email]); //KULLANICIYI BULDUK.
+    if (kullanicilar.length === 0) {
+      return res.render('email-dogrula', { hatalar: ['Bu email ile kayıtlı kullanıcı bulunamadı.'], eskiBilgi });
+    }
 
     const kullanici = kullanicilar[0];
 
@@ -408,9 +402,12 @@ app.get('/market-panel', marketGerekli, async (req, res, next) => {
   }
 });
 
+const uploadsKlasoru = path.join(__dirname, 'public', 'uploads');
+fs.mkdirSync(uploadsKlasoru, { recursive: true });
+
 const yuklemeAyarlari = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, 'public', 'uploads'));
+    cb(null, uploadsKlasoru);
   },
   filename: (req, file, cb) => {
     const uzanti = path.extname(file.originalname).toLowerCase();
@@ -424,7 +421,7 @@ const resimYukle = multer({
   storage: yuklemeAyarlari,
   limits: { fileSize: 2 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    const izinVerilenTipler = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'];
+    const izinVerilenTipler = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
     if (izinVerilenTipler.includes(file.mimetype)) {
       cb(null, true);
     } else {
@@ -615,8 +612,8 @@ app.get('/arama', musteriGerekli, async (req, res, next) => {
        ORDER BY CASE WHEN m.ilce = ? THEN 0 ELSE 1 END,
                 u.son_kullanma_tarihi ASC,
                 u.indirimli_fiyat ASC
-       LIMIT ${sayfaLimiti} OFFSET ${baslangic}`,
-      [req.session.kullanici.sehir, likeKelime, req.session.kullanici.ilce]
+       LIMIT ? OFFSET ?`,
+      [req.session.kullanici.sehir, likeKelime, req.session.kullanici.ilce, sayfaLimiti, baslangic]
     );
 
     res.render('musteri-arama', {
