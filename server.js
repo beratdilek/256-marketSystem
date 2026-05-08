@@ -8,19 +8,8 @@ const bcrypt = require('bcrypt');
 const session = require('express-session');
 const nodemailer = require('nodemailer');
 const multer = require('multer');
-
 const app = express();
-const PORT = Number(process.env.PORT || 3000);
-
-const db = mysql.createPool({
-  host: process.env.DB_HOST || '127.0.0.1',
-  port: Number(process.env.DB_PORT || 3307),
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || 'root',
-  database: process.env.DB_NAME || 'sustainable_market',
-  waitForConnections: true,
-  connectionLimit: 10
-});
+const db = require("./db");
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -860,6 +849,6 @@ app.use((hata, req, res, next) => {
   res.status(500).render('hata', { mesaj }); //BURALAR HATA.EJS İÇİN
 });
 
-app.listen(PORT, () => {
-  console.log(`PORT IS : ${PORT}`);
+app.listen(3000, () => {
+  console.log("PORT IS : 3000");
 });
