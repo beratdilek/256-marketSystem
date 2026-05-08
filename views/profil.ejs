@@ -19,11 +19,11 @@
       <% if (kullanici.rol === 'market') { %>
         <a class="nav-link" href="/market-panel">Market Panel</a>
       <% } else { %>
-        <a class="nav-link" href="/arama">Urun Ara</a>
+        <a class="nav-link" href="/arama">Ürün Ara</a>
         <a class="nav-link" href="/sepet">Sepet</a>
       <% } %>
       <a class="nav-link active" href="/profil">Profil</a>
-      <form method="post" action="/cikis"><button class="btn btn-sm btn-light">Cikis</button></form>
+      <form method="post" action="/Çıkış"><button class="btn btn-sm btn-light">Cikis</button></form>
     </div>
   </div>
 </nav>
@@ -49,20 +49,20 @@
 
                 <!-- Kullanıcının rolüne göre label kısmı market adı veya ad soyad -->
         <div class="mb-3">
-          <label class="form-label"><%= kullanici.rol === 'market' ? 'Market Adi' : 'Ad Soyad' %></label>
+          <label class="form-label"><%= kullanici.rol === 'market' ? 'Market Adı' : 'Ad Soyad' %></label>
           <input type="text" name="ad" class="form-control" value="<%= eskiBilgi.ad || '' %>" required>
         </div>
         <div class="row">
           <div class="col-md-6 mb-3">
-            <label class="form-label">Sehir</label>
+            <label class="form-label">Şehir</label>
             <input type="text" name="sehir" class="form-control" value="<%= eskiBilgi.sehir || '' %>" required>
           </div>
           <div class="col-md-6 mb-3">
-            <label class="form-label">Ilce</label>
+            <label class="form-label">İlçce</label>
             <input type="text" name="ilce" class="form-control" value="<%= eskiBilgi.ilce || '' %>" required>
           </div>
         </div>
-        <button class="btn btn-success w-100">Guncelle</button>
+        <button class="btn btn-success w-100">Güncelle</button>
       </form>
     </div>
   </div>
