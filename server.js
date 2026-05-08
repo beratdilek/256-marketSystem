@@ -73,8 +73,8 @@ function girisGerekli(req, res, next) {
 async function mailKoduGonder(email, kod) {
   if (process.env.EMAIL_DEV_MODE === 'true') {
     console.log('----------------------------------------');
-    console.log('Email dev mode aktif. Gercek email gonderilmedi.');
-    console.log(`Dogrulama kodu (${email}): ${kod}`);
+    console.log('Email dev mode aktif. Gerçek email gönderilmedi.');
+    console.log(`Doğrulama kodu (${email}): ${kod}`);
     console.log('----------------------------------------');
     return;
   }
@@ -92,8 +92,8 @@ async function mailKoduGonder(email, kod) {
   await transporter.sendMail({
     from: process.env.EMAIL_FROM,
     to: email,
-    subject: 'Sustainable Discount Marketplace Dogrulama Kodu',
-    text: `Dogrulama kodunuz: ${kod}. Bu kod 10 dakika icinde gecerlidir.`
+    subject: 'Sustainable Discount Marketplace Doğrulama Kodu',
+    text: `Doğrulama kodunuz: ${kod}. Bu kod 10 dakika geçerlidir.`
   });
 }
 
@@ -112,7 +112,7 @@ function kayitHatalariGetir(bilgi, kayitTipi) { //GENEL HATA İÇİN HEM MARKET 
   if (bosMu(bilgi.ad)) {
     hatalar.push(kayitTipi === 'market' ? 'Market adı boş olamaz.' : 'Ad soyad boş olamaz.'); //MARKET KAYIT YERİYSE MARKET YOKSA AD BOŞ OLAMAZ DÖNDÜRÜR.
   }
-  if (bosMu(bilgi.sifre) || String(bilgi.sifre).length < 4) hatalar.push('Şifre en az 4 karakter olmalidir.'); //ŞİFRE UZUNLUGU BAKIYORUZ.
+  if (bosMu(bilgi.sifre) || String(bilgi.sifre).length < 4) hatalar.push('Şifre en az 4 karakter olmalıdır.'); //ŞİFRE UZUNLUGU BAKIYORUZ.
   if (bosMu(bilgi.sehir)) hatalar.push('Sehir boş olamaz.');
   if (bosMu(bilgi.ilce)) hatalar.push('İlçe boş olamaz.');
   return hatalar; //BURADAN LENGTH ALACAGIZ.
@@ -173,7 +173,7 @@ app.post('/market-kayit', async (req, res, next) => { //BURADA STICKY FORM VE HA
 
     const [varOlanlar] = await db.query('SELECT id FROM kullanicilar WHERE email = ?', [req.body.email]); //BURADA MAİL-DUPLICATION BAKCAZ
     if (varOlanlar.length > 0) {
-      return res.render('market-kayit', { hatalar: ['Bu email zaten kullaniliyor.'], eskiBilgi }); //VARSA HATALARA EKLEDİM.
+      return res.render('market-kayit', { hatalar: ['Bu email zaten kullanılıyor.'], eskiBilgi }); //VARSA HATALARA EKLEDİM.
     }
 
     const sifreHash = await bcrypt.hash(req.body.sifre, 10); //BURASI BCRYPT'TEN GELİYOR !!!ŞİFRE HASHLIYOR!!!
@@ -184,7 +184,7 @@ app.post('/market-kayit', async (req, res, next) => { //BURADA STICKY FORM VE HA
     );
 
     await yeniDogrulamaKoduKaydet(sonuc.insertId, req.body.email.trim()); //BURADAN INP ALIYORUZ.
-    req.session.mesajBasari = 'Kayit basarili. Email dogrulama kodunuzu girin.';
+    req.session.mesajBasari = 'Kayıt başarılı. Email doğrulama kodunuzu girin.';
     res.redirect('/email-dogrula?email=' + encodeURIComponent(req.body.email.trim()));
   } catch (hata) {
     next(hata);
@@ -212,7 +212,7 @@ app.post('/musteri-kayit', async (req, res, next) => { //SUBMIT EDİLİNCE
 
     const [varOlanlar] = await db.query('SELECT id FROM kullanicilar WHERE email = ?', [req.body.email]); //BU SEFER MUSTERI ICIN EMAIL DUPLICATE CHECK YAPTIm.
     if (varOlanlar.length > 0) {
-      return res.render('musteri-kayit', { hatalar: ['Bu email zaten kullaniliyor.'], eskiBilgi }); //HATA VARSA BURASI CALISCAK
+      return res.render('musteri-kayit', { hatalar: ['Bu email zaten kullanılıyor.'], eskiBilgi }); //HATA VARSA BURASI CALISCAK
     }
 
     const sifreHash = await bcrypt.hash(req.body.sifre, 10); //BURASI HASHLEME YAPIYOR TAM BİLMİYORUM???
@@ -223,7 +223,7 @@ app.post('/musteri-kayit', async (req, res, next) => { //SUBMIT EDİLİNCE
     ); //HATA YOKSA SQL'E KAYDET
 
     await yeniDogrulamaKoduKaydet(sonuc.insertId, req.body.email.trim()); //SQL'E KODLARI KAYDEDİYORUZ
-    req.session.mesajBasari = 'Kayit basarili. Email dogrulama kodunuzu girin.';
+    req.session.mesajBasari = 'Kayıt başarılı. Email doğrulama kodunuzu girin.';
     res.redirect('/email-dogrula?email=' + encodeURIComponent(req.body.email.trim())); //BURADA EMAIL=EXAMPLE@GMAIL.COM GİBİ URL CIKICAK, URL'DEN BAKIP KODU KONTROL EDECEĞİZ.
   } catch (hata) {
     next(hata);
@@ -241,8 +241,8 @@ app.post('/email-dogrula', async (req, res, next) => { //BURADA KOD CHECK
     const eskiBilgi = { email };
     const hatalar = [];
 
-    if (!emailDogruMu(email)) hatalar.push('Gecerli email yazmalisiniz.');
-    if (!/^\d{6}$/.test(kod)) hatalar.push('Kod 6 haneli sayi olmalidir.'); //KOD KONTROL
+    if (!emailDogruMu(email)) hatalar.push('Geçerli email yazmalısınız.');
+    if (!/^\d{6}$/.test(kod)) hatalar.push('Kod 6 haneli sayı olmalıdır.'); //KOD KONTROL
     if (hatalar.length > 0) {
       return res.render('email-dogrula', { hatalar, eskiBilgi }); //HATA VARSA EN BAŞA DÖNME GİBİ
     }
@@ -425,7 +425,7 @@ const resimYukle = multer({
     if (izinVerilenTipler.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Sadece resim dosyasi yukleyebilirsiniz.'));
+      cb(new Error('Sadece resim dosyası yükleyebilirsiniz.'));
     }
   }
 });
@@ -490,12 +490,12 @@ app.get('/urun-duzenle/:id', marketGerekli, async (req, res, next) => {
     );
 
     if (urunler.length === 0) {
-      req.session.mesajHata = 'Ürün bulunamadı.';
+      req.session.mesajHata = 'Ürün bulunamadı veya size ait değil.';
       return res.redirect('/market-panel');
     }
 
     res.render('urun-form', {
-      formBaslik: 'Ürün Düzenle',
+      formBaslik: 'Urun Duzenle',
       formAction: '/urun-duzenle/' + urunId,
       hatalar: [],
       eskiBilgi: {},
@@ -515,7 +515,7 @@ app.post('/urun-duzenle/:id', marketGerekli, resimYukle.single('resim'), async (
     );
 
     if (urunler.length === 0) {
-      req.session.mesajHata = 'Ürün bulunamadı.';
+      req.session.mesajHata = 'Ürün bulunamadı veya size ait değil.';
       return res.redirect('/market-panel');
     }
 
@@ -524,7 +524,7 @@ app.post('/urun-duzenle/:id', marketGerekli, resimYukle.single('resim'), async (
 
     if (hatalar.length > 0) {
       return res.render('urun-form', {
-        formBaslik: 'Ürün Düzenle',
+        formBaslik: 'Urun Duzenle',
         formAction: '/urun-duzenle/' + urunId,
         hatalar,
         eskiBilgi,
@@ -550,7 +550,7 @@ app.post('/urun-duzenle/:id', marketGerekli, resimYukle.single('resim'), async (
       ]
     );
 
-    req.session.mesajBasari = 'Ürün guncellendi.';
+    req.session.mesajBasari = 'Ürün güncellendi.';
     res.redirect('/market-panel');
   } catch (hata) {
     next(hata);
@@ -566,9 +566,9 @@ app.post('/urun-sil/:id', marketGerekli, async (req, res, next) => {
     );
 
     if (sonuc.affectedRows === 0) {
-      req.session.mesajHata = 'Ürün silinemedi.';
+      req.session.mesajHata = 'Urun silinemedi.';
     } else {
-      req.session.mesajBasari = 'Ürün silindi.';
+      req.session.mesajBasari = 'Urun silindi.';
     }
 
     res.redirect('/market-panel');
@@ -644,7 +644,7 @@ app.post('/sepete-ekle', musteriGerekli, async (req, res, next) => {
     );
 
     if (urunler.length === 0) {
-      req.session.mesajHata = 'Bu ürün sepete eklenemez.';
+      req.session.mesajHata = 'Bu urun sepete eklenemez.';
       return res.redirect('/arama');
     }
 
@@ -657,7 +657,7 @@ app.post('/sepete-ekle', musteriGerekli, async (req, res, next) => {
 
     if (sepetSatirlari.length > 0) {
       if (sepetSatirlari[0].adet >= urun.stok) {
-        req.session.mesajHata = 'Sepetteki adet stok miktarını geçemez.';
+        req.session.mesajHata = 'Sepetteki adet stok miktarini gecemez.';
         return res.redirect('/arama?q=' + encodeURIComponent(req.body.q || ''));
       }
 
@@ -672,7 +672,7 @@ app.post('/sepete-ekle', musteriGerekli, async (req, res, next) => {
       );
     }
 
-    req.session.mesajBasari = 'Ürün sepete eklendi.';
+    req.session.mesajBasari = 'Urun sepete eklendi.';
     res.redirect('/arama?q=' + encodeURIComponent(req.body.q || ''));
   } catch (hata) {
     next(hata);
@@ -785,14 +785,79 @@ app.post('/sepet-sil', musteriGerekli, async (req, res, next) => {
 });
 
 
+app.post('/satin-al', musteriGerekli, async (req, res, next) => {
+  try {
+    const [sepetUrunleri] = await db.query(
+      `SELECT s.id AS sepet_id, s.adet, u.id AS urun_id, u.baslik, u.stok,
+              DATEDIFF(u.son_kullanma_tarihi, CURDATE()) AS kalan_gun
+       FROM sepet_urunleri s
+       JOIN urunler u ON u.id = s.urun_id
+       WHERE s.musteri_id = ?`,
+      [req.session.kullanici.id]
+    );
+
+    if (sepetUrunleri.length === 0) {
+      return res.json({
+        basarili: false,
+        mesaj: 'Sepetiniz boş.'
+      });
+    }
+
+    for (const sepetUrunu of sepetUrunleri) {
+      if (sepetUrunu.kalan_gun < 0) {
+        return res.json({
+          basarili: false,
+          mesaj: `${sepetUrunu.baslik} ürününün tarihi geçmiş.`
+        });
+      }
+
+      if (sepetUrunu.adet > sepetUrunu.stok) {
+        return res.json({
+          basarili: false,
+          mesaj: `${sepetUrunu.baslik} için yeterli stok yok.`
+        });
+      }
+    }
+
+    for (const sepetUrunu of sepetUrunleri) {
+      const yeniStok = sepetUrunu.stok - sepetUrunu.adet;
+
+      if (yeniStok <= 0) {
+        await db.query(
+          'DELETE FROM urunler WHERE id = ?',
+          [sepetUrunu.urun_id]
+        );
+      } else {
+        await db.query(
+          'UPDATE urunler SET stok = ? WHERE id = ?',
+          [yeniStok, sepetUrunu.urun_id]
+        );
+      }
+    }
+
+    await db.query(
+      'DELETE FROM sepet_urunleri WHERE musteri_id = ?',
+      [req.session.kullanici.id]
+    );
+
+    res.json({
+      basarili: true,
+      mesaj: 'Satın alma başarılı.'
+    });
+
+  } catch (hata) {
+    next(hata);
+  }
+});
+
 app.use((req, res) => {
-  res.status(404).render('hata', { mesaj: 'Sayfa bulunamadı.' });
+  res.status(404).render('hata', { mesaj: 'Sayfa bulunamadı.' }); //BURALAR HATA.EJS İÇİN
 });
 
 app.use((hata, req, res, next) => {
   console.error(hata);
   const mesaj = hata.message || 'Beklenmeyen bir hata oluştu.';
-  res.status(500).render('hata', { mesaj });
+  res.status(500).render('hata', { mesaj }); //BURALAR HATA.EJS İÇİN
 });
 
 app.listen(PORT, () => {
