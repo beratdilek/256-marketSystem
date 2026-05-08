@@ -328,7 +328,7 @@ app.post('/cikis', (req, res) => {
   });
 });
 
-app.get('/profil', girisGerekli, (req, res) => { //GİRİS YAPMAMIS BİRİYSE BURASI CALISMAZ
+app.get('/profil', girisGerekli, (req, res) => { //GİRİŞ YAPMAMIS BİRİYSE BURASI CALISMAZ
   res.render('profil', { hatalar: [], eskiBilgi: req.session.kullanici });
 });
 
@@ -495,7 +495,7 @@ app.get('/urun-duzenle/:id', marketGerekli, async (req, res, next) => {
     }
 
     res.render('urun-form', {
-      formBaslik: 'Urun Duzenle',
+      formBaslik: 'Ürün Düzenle',
       formAction: '/urun-duzenle/' + urunId,
       hatalar: [],
       eskiBilgi: {},
@@ -524,7 +524,7 @@ app.post('/urun-duzenle/:id', marketGerekli, resimYukle.single('resim'), async (
 
     if (hatalar.length > 0) {
       return res.render('urun-form', {
-        formBaslik: 'Urun Duzenle',
+        formBaslik: 'Ürün Düzenle',
         formAction: '/urun-duzenle/' + urunId,
         hatalar,
         eskiBilgi,
@@ -566,9 +566,9 @@ app.post('/urun-sil/:id', marketGerekli, async (req, res, next) => {
     );
 
     if (sonuc.affectedRows === 0) {
-      req.session.mesajHata = 'Urun silinemedi.';
+      req.session.mesajHata = 'Ürün silinemedi.';
     } else {
-      req.session.mesajBasari = 'Urun silindi.';
+      req.session.mesajBasari = 'Ürün silindi.';
     }
 
     res.redirect('/market-panel');
@@ -644,7 +644,7 @@ app.post('/sepete-ekle', musteriGerekli, async (req, res, next) => {
     );
 
     if (urunler.length === 0) {
-      req.session.mesajHata = 'Bu urun sepete eklenemez.';
+      req.session.mesajHata = 'Bu ürün sepete eklenemez.';
       return res.redirect('/arama');
     }
 
@@ -657,7 +657,7 @@ app.post('/sepete-ekle', musteriGerekli, async (req, res, next) => {
 
     if (sepetSatirlari.length > 0) {
       if (sepetSatirlari[0].adet >= urun.stok) {
-        req.session.mesajHata = 'Sepetteki adet stok miktarini gecemez.';
+        req.session.mesajHata = 'Sepetteki adet stok miktarını geçemez.';
         return res.redirect('/arama?q=' + encodeURIComponent(req.body.q || ''));
       }
 
@@ -672,7 +672,7 @@ app.post('/sepete-ekle', musteriGerekli, async (req, res, next) => {
       );
     }
 
-    req.session.mesajBasari = 'Urun sepete eklendi.';
+    req.session.mesajBasari = 'Ürün sepete eklendi.';
     res.redirect('/arama?q=' + encodeURIComponent(req.body.q || ''));
   } catch (hata) {
     next(hata);
@@ -741,7 +741,7 @@ app.post('/sepet-guncelle', musteriGerekli, async (req, res, next) => {
     }
 
     if (yeniAdet > satirlar[0].stok) {
-      return res.json({ basarili: false, mesaj: 'Stok miktarindan fazla ürün seçilemez.' });
+      return res.json({ basarili: false, mesaj: 'Stok miktarından fazla ürün seçilemez.' });
     }
 
     await db.query(
