@@ -55,7 +55,7 @@ document.querySelectorAll('.sil-btn').forEach(button => {
     const sonuc = await jsonPost('/sepet-sil', { sepetId });
 
     if (!sonuc.basarili) {
-      mesajGoster('danger', sonuc.mesaj || 'Silme islemi basarisiz.');
+      mesajGoster('danger', sonuc.mesaj || 'Silme işlemi başarısız.');
       return;
     }
 
@@ -68,7 +68,7 @@ document.querySelectorAll('.sil-btn').forEach(button => {
 const satinAlBtn = document.getElementById('satinAlBtn');
 if (satinAlBtn) {
   satinAlBtn.addEventListener('click', async () => {
-    if (!confirm('Sepeti satin almak istiyor musunuz?')) return;
+    if (!confirm('Sepeti satın almak istiyor musunuz?')) return;
 
     const sonuc = await jsonPost('/satin-al', {});
 
